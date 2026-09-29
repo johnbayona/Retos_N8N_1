@@ -1,0 +1,619 @@
+{
+  "name": "Reto 14 - Recepción de solicitudes de compra",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ $('Edit Fields_Consolidar solicitud').first().json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1408,
+        -384
+      ],
+      "id": "03e6cbbc-540d-4924-b3f1-9279e0bb9b2a",
+      "name": "Preparar envío al Reto 15"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "a1YpEb6hckvSGJxW",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/a1YpEb6hckvSGJxW",
+          "cachedResultName": "Reto 15 - Aprobación y orden de compra"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1632,
+        -384
+      ],
+      "id": "a695dc28-bf14-4f79-be1c-8a6dfda4a003",
+      "name": "Enviar al Reto 15."
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "solicitudes-compra",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -384,
+        -288
+      ],
+      "id": "96900746-6186-4b24-ad13-0144de109e17",
+      "name": "Solicitud compra",
+      "webhookId": "fb451ccd-3b62-4ed2-8188-9f6822b7030a"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "86818ff5-3f27-472d-8943-92a78f11ad7e",
+              "leftValue": "={{\n  !!$json.body &&\n  ['solicitante', 'correo', 'centro_costo', 'justificacion']\n    .every(campo =>\n      typeof $json.body[campo] === 'string' &&\n      $json.body[campo].trim().length > 0\n    ) &&\n  /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test($json.body.correo.trim()) &&\n  Array.isArray($json.body.items) &&\n  $json.body.items.length > 0 &&\n  $json.body.items.every(producto =>\n    producto !== null &&\n    typeof producto === 'object' &&\n    typeof producto.descripcion === 'string' &&\n    producto.descripcion.trim().length > 0 &&\n    typeof producto.cantidad === 'number' &&\n    Number.isFinite(producto.cantidad) &&\n    producto.cantidad > 0 &&\n    typeof producto.valor_unitario === 'number' &&\n    Number.isFinite(producto.valor_unitario) &&\n    producto.valor_unitario > 0\n  )\n}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -160,
+        -288
+      ],
+      "id": "1b2841ec-62d4-47cf-a5cc-a68a36eb8942",
+      "name": "Validar solicitud"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"ok\": false,\n  \"error\": \"SOLICITUD_INVALIDA\",\n  \"mensaje\": \"Revise los datos obligatorios, el formato del correo y los productos. Debe enviar al menos un producto con descripcion, cantidad y valor unitario mayores que cero.\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        64,
+        -192
+      ],
+      "id": "05a24183-bf82-41ca-86c7-973c49cd285d",
+      "name": "Responder solicitud inválida"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f068a418-3c52-4bbd-b73a-7ef481dfe172",
+              "name": "id_solicitud",
+              "value": "={{ 'SOL-' + $execution.id }}",
+              "type": "string"
+            },
+            {
+              "id": "5d71cc4b-fa7a-44af-bc91-852e6ee811ce",
+              "name": "fecha_solicitud",
+              "value": "={{ $now.setZone('America/Bogota').toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "c4405d52-d5ab-46de-975b-20a06fc0f953",
+              "name": "solicitante",
+              "value": "={{ $json.body.solicitante.trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "eeb4a854-fd38-41ac-9c8e-2cb4f19f92b5",
+              "name": "=correo",
+              "value": "={{ $json.body.correo.trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "1582e16b-0337-42eb-9c06-f2a9141c38fb",
+              "name": "centro_costo",
+              "value": "={{ $json.body.centro_costo.trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "bd0b6e24-f0b0-477b-9a4d-dad1c6f92643",
+              "name": "justificacion",
+              "value": "={{ $json.body.justificacion.trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "6438e895-6db7-45b7-b4a6-cab455a96db9",
+              "name": "items",
+              "value": "={{ $json.body.items }}",
+              "type": "array"
+            },
+            {
+              "id": "47cfcaaa-77f3-4e0d-a1bc-209df8fb41c0",
+              "name": "estado",
+              "value": "PEDIENTE_APROBACION",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        64,
+        -384
+      ],
+      "id": "4f5f61e7-0e51-4ab8-a34a-46dc8ce4eceb",
+      "name": "Preparar solicitud"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  id_solicitud: $json.id_solicitud,\n  total: $json.total,\n  estado: $json.estado\n} }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1856,
+        -384
+      ],
+      "id": "7b17154e-10b5-451c-b20f-9b7319fc6f8f",
+      "name": "Responder solicitud recibida."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "include": "allOtherFields",
+        "options": {
+          "destinationFieldName": "producto"
+        }
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        288,
+        -384
+      ],
+      "id": "1913e926-2e06-4556-9a92-70a1c87dd303",
+      "name": "Separar productos."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5d68ffd9-0634-4f26-b12c-94e07a76830b",
+              "name": "producto.subtotal",
+              "value": "={{ $json.producto.cantidad * $json.producto.valor_unitario }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {
+          "dotNotation": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        512,
+        -384
+      ],
+      "id": "de1399d0-3546-45d7-b6c2-0720c86be760",
+      "name": "Calcular subtotal"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "lineas",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        736,
+        -384
+      ],
+      "id": "3bfb950b-901b-494b-b69d-2374555e0abc",
+      "name": "Agrupar productos"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1DUX-5RgTUcqW15EUyJwjqjnl570uUup0LvQJc1aNNcU",
+          "mode": "list",
+          "cachedResultName": "Solicitudes de compra.",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1DUX-5RgTUcqW15EUyJwjqjnl570uUup0LvQJc1aNNcU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Solicitudes",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1DUX-5RgTUcqW15EUyJwjqjnl570uUup0LvQJc1aNNcU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_solicitud": "={{ $json.id_solicitud }}",
+            "fecha_solicitud": "={{ $json.fecha_solicitud }}",
+            "solicitante": "={{ $json.solicitante }}",
+            "correo": "={{ $json.correo }}",
+            "centro_costo": "={{ $json.centro_costo }}",
+            "justificacion": "={{ $json.justificacion }}",
+            "estado": "={{ $json.estado }}",
+            "total": "={{ $json.total }}",
+            "cantidad_productos": "={{ $json.items.length }}",
+            "detalle_productos": "={{ JSON.stringify($json.items) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_solicitud",
+              "displayName": "id_solicitud",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fecha_solicitud",
+              "displayName": "fecha_solicitud",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "solicitante",
+              "displayName": "solicitante",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "correo",
+              "displayName": "correo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "centro_costo",
+              "displayName": "centro_costo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "justificacion",
+              "displayName": "justificacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total",
+              "displayName": "total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cantidad_productos",
+              "displayName": "cantidad_productos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "detalle_productos",
+              "displayName": "detalle_productos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1184,
+        -384
+      ],
+      "id": "5e610698-78a6-43ab-a843-25ae84101624",
+      "name": "Registrar solicitud.",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "55L4jOkLMnG2B3fi",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f068a418-3c52-4bbd-b73a-7ef481dfe172",
+              "name": "id_solicitud",
+              "value": "={{ $json.lineas[0].id_solicitud }}",
+              "type": "string"
+            },
+            {
+              "id": "5d71cc4b-fa7a-44af-bc91-852e6ee811ce",
+              "name": "=fecha_solicitud",
+              "value": "={{ $json.lineas[0].fecha_solicitud }}",
+              "type": "string"
+            },
+            {
+              "id": "c4405d52-d5ab-46de-975b-20a06fc0f953",
+              "name": "solicitante",
+              "value": "={{ $json.lineas[0].solicitante }}",
+              "type": "string"
+            },
+            {
+              "id": "eeb4a854-fd38-41ac-9c8e-2cb4f19f92b5",
+              "name": "=correo",
+              "value": "={{ $json.lineas[0].correo }}",
+              "type": "string"
+            },
+            {
+              "id": "1582e16b-0337-42eb-9c06-f2a9141c38fb",
+              "name": "centro_costo",
+              "value": "={{ $json.lineas[0].centro_costo }}",
+              "type": "string"
+            },
+            {
+              "id": "bd0b6e24-f0b0-477b-9a4d-dad1c6f92643",
+              "name": "=justificacion",
+              "value": "={{ $json.lineas[0].justificacion }}",
+              "type": "string"
+            },
+            {
+              "id": "6438e895-6db7-45b7-b4a6-cab455a96db9",
+              "name": "items",
+              "value": "={{ $json.body.items }}",
+              "type": "array"
+            },
+            {
+              "id": "47cfcaaa-77f3-4e0d-a1bc-209df8fb41c0",
+              "name": "estado",
+              "value": "={{ $json.lineas[0].estado }}",
+              "type": "string"
+            },
+            {
+              "id": "31facf1b-5f81-4ff1-9be1-fcaafd46c191",
+              "name": "items",
+              "value": "={{ $json.lineas.map(linea => linea.producto) }}",
+              "type": "array"
+            },
+            {
+              "id": "901ad715-86b1-43bc-9e0f-b050463cd031",
+              "name": "total",
+              "value": "={{ $json.lineas.reduce((suma, linea) => suma + linea.producto.subtotal, 0) }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        960,
+        -384
+      ],
+      "id": "f125be88-655d-4e24-9388-689b5b247bac",
+      "name": "Edit Fields_Consolidar solicitud"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Preparar envío al Reto 15": {
+      "main": [
+        [
+          {
+            "node": "Enviar al Reto 15.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Solicitud compra": {
+      "main": [
+        [
+          {
+            "node": "Validar solicitud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar solicitud": {
+      "main": [
+        [
+          {
+            "node": "Preparar solicitud",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder solicitud inválida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar solicitud": {
+      "main": [
+        [
+          {
+            "node": "Separar productos.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder solicitud recibida.": {
+      "main": [
+        []
+      ]
+    },
+    "Separar productos.": {
+      "main": [
+        [
+          {
+            "node": "Calcular subtotal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar al Reto 15.": {
+      "main": [
+        [
+          {
+            "node": "Responder solicitud recibida.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular subtotal": {
+      "main": [
+        [
+          {
+            "node": "Agrupar productos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agrupar productos": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields_Consolidar solicitud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar solicitud.": {
+      "main": [
+        [
+          {
+            "node": "Preparar envío al Reto 15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields_Consolidar solicitud": {
+      "main": [
+        [
+          {
+            "node": "Registrar solicitud.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9f7bf9cb-5da6-4f05-8780-438dd4032d71",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8870ad36925f8f4776afd66fcc7d35e30431f422812b897599ebae4cef0121f7"
+  },
+  "nodeGroups": [],
+  "id": "bd0T4jNaQAmTlIvP",
+  "tags": []
+}

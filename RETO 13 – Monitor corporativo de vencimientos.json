@@ -1,0 +1,372 @@
+{
+  "name": "RETO 13 – Monitor corporativo de vencimientos",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "27e9b22c-9dc6-42da-a5ff-9dab6874c7e7",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1qdx2QFHiAtNe756ETKOpUCjJE4q4_HnneMGSsrcEOkM",
+          "mode": "list",
+          "cachedResultName": "Reto 13 - Monitor Vencimientos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1qdx2QFHiAtNe756ETKOpUCjJE4q4_HnneMGSsrcEOkM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Vencimientos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1qdx2QFHiAtNe756ETKOpUCjJE4q4_HnneMGSsrcEOkM/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "e67fd97b-1b9d-4d30-ac7e-361074cf8af2",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "55L4jOkLMnG2B3fi",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "947905e3-5505-4f55-b61e-6fe290f325e7",
+              "name": "dias_restantes",
+              "value": "={{ Math.floor(DateTime.fromISO($json.fecha_vencimiento).startOf('day').diff($now.startOf('day'), 'days').days) }}",
+              "type": "string"
+            },
+            {
+              "id": "2056c38b-b76f-46bd-9f63-a9147a9049a9",
+              "name": "estado_alerta",
+              "value": "={{\n  Math.floor(\n    DateTime.fromISO($json.fecha_vencimiento).startOf('day')\n    .diff($now.startOf('day'), 'days').days\n  ) < 0\n    ? 'VENCIDO'\n    : Math.floor(\n        DateTime.fromISO($json.fecha_vencimiento).startOf('day')\n        .diff($now.startOf('day'), 'days').days\n      ) <= 7\n      ? 'PRÓXIMO EN 7 DÍAS'\n      : Math.floor(\n          DateTime.fromISO($json.fecha_vencimiento).startOf('day')\n          .diff($now.startOf('day'), 'days').days\n        ) <= 15\n        ? 'PRÓXIMO EN 15 DÍAS'\n        : Math.floor(\n            DateTime.fromISO($json.fecha_vencimiento).startOf('day')\n            .diff($now.startOf('day'), 'days').days\n          ) <= 30\n          ? 'PRÓXIMO EN 30 DÍAS'\n          : 'SIN ALERTA'\n}}",
+              "type": "string"
+            },
+            {
+              "id": "56bd80df-5fb0-4f6e-8ab1-070b7ef87729",
+              "name": "debe_alertar",
+              "value": "={{\n  $json.estado_alerta !== 'SIN ALERTA'\n  &&\n  (\n    !$json.ultima_alerta\n    ||\n    !DateTime.fromISO($json.ultima_alerta).hasSame($now, 'day')\n  )\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {
+          "ignoreConversionErrors": false
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "3d514178-05e1-4d28-a316-48dbbac6a1a9",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5e3e1483-89a4-4a5d-9bf5-72f30d7d9206",
+              "leftValue": "={{ $json.debe_alertar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "de65307b-791e-437c-b664-cd27084b131b",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "alertas",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        896,
+        0
+      ],
+      "id": "03b07dba-7e60-4182-8a73-87f1b895ccae",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "sendTo": "johnbayona01@gmail.com",
+        "subject": "⚠️ Reporte diario de vencimientos",
+        "message": "={{\n'REPORTE DE VENCIMIENTOS\\n\\n' +\n$input.first().json.alertas.map(a =>\n'Responsable: ' + a.responsable +\n'\\nDocumento: ' + a.documento +\n'\\nFecha de vencimiento: ' + a.fecha_vencimiento +\n'\\nEstado: ' + a.estado_alerta +\n'\\nDías restantes: ' + a.dias_restantes +\n'\\n--------------------------------\\n'\n).join('\\n')\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        -96
+      ],
+      "id": "d323cd59-1c0f-46ef-a1db-77a920ca5885",
+      "name": "Send a message",
+      "webhookId": "428b97ec-fb9c-4230-858d-6e173e5f6220",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "MZICBOX700m3MLGc",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "alertas",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        96
+      ],
+      "id": "860dd16b-94b3-4d26-b65a-af5d8d7e6f0e",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1qdx2QFHiAtNe756ETKOpUCjJE4q4_HnneMGSsrcEOkM",
+          "mode": "list",
+          "cachedResultName": "Reto 13 - Monitor Vencimientos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1qdx2QFHiAtNe756ETKOpUCjJE4q4_HnneMGSsrcEOkM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Vencimientos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1qdx2QFHiAtNe756ETKOpUCjJE4q4_HnneMGSsrcEOkM/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ultima_alerta": "={{ $now.setZone('America/Bogota').toFormat('yyyy-MM-dd') }}",
+            "documento": "={{ $json.documento }}"
+          },
+          "matchingColumns": [
+            "documento"
+          ],
+          "schema": [
+            {
+              "id": "responsable",
+              "displayName": "responsable",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "documento",
+              "displayName": "documento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_vencimiento",
+              "displayName": "fecha_vencimiento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ultima_alerta",
+              "displayName": "ultima_alerta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        96
+      ],
+      "id": "5f9efde4-f083-4c44-9747-21ccb1d742ef",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "55L4jOkLMnG2B3fi",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3bd4b562-9dd1-4e7d-ada1-bd36945d29cd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8870ad36925f8f4776afd66fcc7d35e30431f422812b897599ebae4cef0121f7"
+  },
+  "nodeGroups": [],
+  "id": "R8uxIzNMkC8WR2YZ",
+  "tags": []
+}
